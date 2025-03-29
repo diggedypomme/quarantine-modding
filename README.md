@@ -69,7 +69,7 @@ There is no delimiter, so you need to work out the length of each subsequent til
 - number of floors * 18  
 - number of walls * 18  
 - Texture data *2  
-- sprite count * 2
+- sprite count * 12
 
 By working out the start stops for each of the tiles, you can then parse the data. I will add more info on this shortly.
 
