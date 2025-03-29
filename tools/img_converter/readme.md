@@ -1,0 +1,1 @@
+Please note that the paths are all wrong for this, but this is a tool that can do the extraction of the gifs. I will get it updated when I can
