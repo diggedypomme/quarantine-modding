@@ -33,6 +33,7 @@ As this is currently still in progress, I need to combine and rework some of the
 - **`imageconvert.html`** – This lets you load a `.PNG` file, applies the palette to it, and then has an export image option. This will export the image **into browser local storage**. This can then be imported in the main sprite editor. I know this is a janky setup and will need to be updated, but that's just the way I have it working for now during my own testing.
 - **`1_simple_html_to_open_sprite6.html`** – This is the main sprite editor. I hard-coded the palette, which I will need to strip before sharing here, so I need to get this updated. I'll put the current code here for now. Please see the following screenshots for explanations.
 
+**NOTE!**  These tools make sense for me, however are not at all user friendly. I must stress that I will be updating them to make them useable, but am sharing them in advance.
 ---
 ## 1_simple_html_to_open_sprite6.html - the main editor. WIP
 
