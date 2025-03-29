@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tilemap Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-right: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+        }
+
+        .color-mapping {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .color-mapping input[type="number"] {
+            width: 60px;
+        }
+
+        .color-mapping input[type="color"] {
+            width: 50px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .grid-container {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background: #fff;
+        }
+
+        .grid-wrapper {
+            transform-origin: 0 0;
+            position: absolute;
+            display: inline-block;
+        }
+
+        .grid {
+            display: grid;
+            gap: 1px;
+            background-color: #ccc;
+            padding: 1px;
+        }
+
+        .tile {
+            width: 50px;
+            height: 50px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tile input {
+            width: 90%;
+            height: 90%;
+            text-align: center;
+            border: 1px solid #ddd;
+            padding: 0;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .color-legend {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin: 5px 0;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ccc;
+        }
+		  .preview-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 25%;
+            background: rgba(240, 240, 240, 0.95);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+			display: none;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .preview-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .preview-header {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ccc;
+            font-weight: bold;
+        }
+		        .preview-header {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ccc;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+
+    </style>
+</head>
+<body>
+   <div class="preview-container">
+               <div class="preview-header">
+            <span>Tile Preview</span>
+            <span id="tileNumber"></span>
+        </div>
+        <div class="preview-grid">
+            <img class="preview-image" id="preview1" src="/static/placeholder.png" alt="Preview 1">
+            <img class="preview-image" id="preview2" src="/static/placeholder.png" alt="Preview 2">
+            <img class="preview-image" id="preview3" src="/static/placeholder.png" alt="Preview 3">
+            <img class="preview-image" id="preview4" src="/static/placeholder.png" alt="Preview 4">
+        </div>
+    </div>
+
+    <div class="sidebar">
+	<B>v9-multimap - <span id = "xsize">x</span> by <span id = "ysize">y</span></b>
+        <button id="updateButton">Update Game File</button>
+        <button id="colorizeButton">Auto-Colorize Tiles</button>
+        <button id="randomizeColorsButton">Randomize Colors</button>
+        
+        <div class="color-mapping">
+            <input type="number" id="targetNumber" placeholder="Number">
+            <input type="color" id="targetColor">
+            <button id="applyColorButton">Apply</button>
+        </div>
+		<div class="controls">
+    <button id="zoom-in">Zoom In</button>
+    <button id="zoom-out">Zoom Out</button>
+</div>
+        <div class="color-legend">
+            <h3>Color Legend</h3>
+            <div id="legendContainer"></div>
+        </div>
+
+    </div>
+	
+    <div class="main-content">
+        <div class="grid-container">
+            <div class="grid-wrapper">
+                <div class="grid" style="grid-template-columns: repeat({{ cols }}, 50px);">
+                    {% for row in grid_data %}
+                        {% for cell in row %}
+                            <div class="tile">
+                                <input type="text" value="{{ cell }}" />
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const gridWrapper = document.querySelector('.grid-wrapper');
+        let scale = 1;
+        const SCALE_FACTOR = 0.1;
+        const MIN_SCALE = 0.1;
+        const MAX_SCALE = 5;
+        let colorMap = new Map();
+
+		
+		
+		function check_gridsize()
+		{
+		
+			gridconf={{grid_data | safe}}
+			console.log((gridconf))
+			
+			let maxLength = 0;
+
+			// Iterate through the outer array
+			for (const innerArray of gridconf) {
+				// Update maxLength if the current inner array is longer
+				if (innerArray.length > maxLength) {
+					maxLength = innerArray.length;
+				}
+			}
+
+			
+			document.getElementById("xsize").innerHTML=maxLength
+			document.getElementById("ysize").innerHTML=gridconf.length
+		
+		
+		}
+		check_gridsize()
+
+        function generateRandomColor() {
+            const hue = Math.floor(Math.random() * 360);
+            const saturation = 70 + Math.random() * 30; // 70-100%
+            const lightness = 40 + Math.random() * 20;  // 40-60%
+            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+        }
+
+        function getUniqueValues() {
+            const values = new Set();
+            document.querySelectorAll('.tile input').forEach(input => {
+                const value = input.value.trim();
+                if (value !== '0' && value !== '') {
+                    values.add(value);
+                }
+            });
+            return Array.from(values);
+        }
+
+function updateColorLegend() {
+    const legendContainer = document.getElementById('legendContainer');
+    legendContainer.innerHTML = '';
+
+    // Convert colorMap entries to an array and sort by number (key)
+    const sortedEntries = Array.from(colorMap.entries()).sort((a, b) => a[0] - b[0]);
+
+    // Iterate over the sorted entries
+    sortedEntries.forEach(([number, color]) => {
+        console.log('Number:', number, 'Color:', color); // Log both for debugging
+        const legendItem = document.createElement('div');
+        legendItem.className = 'legend-item';
+        legendItem.innerHTML = `
+            <div class="color-box" style="background-color: ${color};"></div>
+            <span>Value: ${number}</span>
+        `;
+        legendContainer.appendChild(legendItem);
+    });
+}
+
+
+
+        function applyColors() {
+            document.querySelectorAll('.tile input').forEach(input => {
+                const value = input.value.trim();
+                if (value === '0' || value === '') {
+                    input.style.backgroundColor = 'white';
+                } else {
+                    input.style.backgroundColor = colorMap.get(value) || 'white';
+                }
+            });
+            updateColorLegend();
+        }
+
+        function autoColorize() {
+            colorMap.clear();
+            const uniqueValues = getUniqueValues();
+            uniqueValues.forEach(value => {
+                colorMap.set(value, generateRandomColor());
+            });
+            applyColors();
+        }
+
+        // Event Listeners
+        document.getElementById('colorizeButton').addEventListener('click', autoColorize);
+
+        document.getElementById('randomizeColorsButton').addEventListener('click', () => {
+            colorMap.forEach((_, key) => {
+                colorMap.set(key, generateRandomColor());
+            });
+            applyColors();
+        });
+
+        document.getElementById('applyColorButton').addEventListener('click', () => {
+            const number = document.getElementById('targetNumber').value;
+            const color = document.getElementById('targetColor').value;
+            if (number !== '') {
+                colorMap.set(number, color);
+                applyColors();
+            }
+        });
+
+        // Monitor changes to input fields
+        document.querySelector('.grid').addEventListener('input', (e) => {
+            if (e.target.tagName === 'INPUT') {
+                //autoColorize();
+				applyColors()
+            }
+        });
+
+        // Prevent browser zoom
+        document.addEventListener('wheel', function(e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Custom zoom handling
+        document.querySelector('.grid-container').addEventListener('wheel', function(e) {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -SCALE_FACTOR : SCALE_FACTOR;
+                const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale + delta));
+                
+                if (newScale !== scale) {
+                    scale = newScale;
+                    gridWrapper.style.transform = `scale(${scale})`;
+                    
+                    // Adjust font size
+                    const fontSize = Math.max(12, 16 * scale);
+                    document.querySelectorAll('.tile input').forEach(input => {
+                        input.style.fontSize = `${fontSize}px`;
+                    });
+                }
+            }
+        });
+		
+		
+		
+		// Function to adjust zoom
+function adjustZoom(delta) {
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale + delta));
+    
+    if (newScale !== scale) {
+        scale = newScale;
+        const gridWrapper = document.querySelector('.grid-wrapper'); // Ensure this is correctly targeted
+        gridWrapper.style.transform = `scale(${scale})`;
+        
+        // Adjust font size
+        const fontSize = Math.max(12, 16 * scale);
+        document.querySelectorAll('.tile input').forEach(input => {
+            input.style.fontSize = `${fontSize}px`;
+        });
+    }
+}
+
+		
+		document.querySelector('#zoom-in').addEventListener('click', () => adjustZoom(0.2));
+document.querySelector('#zoom-out').addEventListener('click', () => adjustZoom(-0.2));
+
+
+
+adjustZoom(-0.7)
+
+document.querySelector('.grid-container').scrollLeft = document.querySelector('.grid-container').scrollWidth * 0.6;
+
+        // Update button handler
+        document.getElementById('updateButton').addEventListener('click', function() {
+            const gridData = [];
+            const rows = document.querySelectorAll('.grid > .tile');
+            const cols = {{ cols }};
+            
+            for (let i = 0; i < rows.length; i += cols) {
+                const rowData = [];
+                for (let j = 0; j < cols; j++) {
+                    const input = rows[i + j].querySelector('input');
+                    rowData.push(input.value);
+                }
+                gridData.push(rowData);
+            }
+
+            fetch('/update_chosenmap', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+    gridData: gridData, 
+    mapname: {{ mapname | tojson }} 
+}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Grid updated successfully!');
+                } else {
+                    alert('Error updating grid: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error updating grid: ' + error);
+            });
+        });
+
+        // Initial coloring
+        autoColorize();
+		
+		
+		
+		
+		
+		       function updatePreviewImages(tileNumber) {
+			   let displayNumber = tileNumber;
+			   let originalNumber=tileNumber
+			   
+            // Handle the special case for 0
+            if (tileNumber === '0') {
+                tileNumber = '128';
+            } else {
+                // Convert numbers greater than 128 to loop back (129 becomes 1, etc.)
+                const num = parseInt(tileNumber);
+                if (num > 128) {
+                    tileNumber = String(((num - 1) % 128) + 1);
+					 displayNumber = tileNumber;
+					 
+					    
+                }
+            }
+			
+			document.getElementById('tileNumber').textContent = `Displaying setup ${displayNumber} for tile  ${originalNumber}`;
+            // Update each preview image
+            for (let i = 1; i <= 4; i++) {
+                const previewImg = document.getElementById(`preview${i}`);
+                previewImg.src = `/static/screenshots/{{mapname}}/${tileNumber}_${i}.png`;
+                previewImg.alt = `Tile ${tileNumber} - View ${i}`;
+            }
+        }
+		
+		     // Update the tile number display
+			 console.log(tileNumber)
+			 
+
+
+        // Add click event listener to all tile inputs
+        document.querySelectorAll('.tile input').forEach(input => {
+            input.addEventListener('focus', function() {
+                const value = this.value.trim();
+                if (value !== '') {
+                    updatePreviewImages(value);
+                }
+            });
+
+            input.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value !== '') {
+                    updatePreviewImages(value);
+                }
+            });
+        });
+
+        // Initial preview (optional - can set to show a default tile)
+        updatePreviewImages('1');
+		
+		
+		
+		
+		
+		
+		function updateColorLegend() {
+    const legendContainer = document.getElementById('legendContainer');
+    legendContainer.innerHTML = '';
+
+    // Convert colorMap entries to an array and sort by number (key)
+    const sortedEntries = Array.from(colorMap.entries()).sort((a, b) => a[0] - b[0]);
+
+    // Iterate over the sorted entries
+    sortedEntries.forEach(([number, color]) => {
+        const legendItem = document.createElement('div');
+        legendItem.className = 'legend-item';
+        legendItem.style.cursor = 'pointer'; // Add pointer cursor to indicate interactivity
+        legendItem.innerHTML = `
+            <div class="color-box" style="background-color: ${color};"></div>
+            <span>Value: ${number}</span>
+        `;
+        
+        // Add hover event listeners
+        legendItem.addEventListener('mouseenter', () => {
+            updatePreviewImages(number.toString());
+            legendItem.style.backgroundColor = '#e0e0e0'; // Optional: visual feedback on hover
+        });
+        
+        legendItem.addEventListener('mouseleave', () => {
+            legendItem.style.backgroundColor = 'transparent';
+        });
+        
+        legendContainer.appendChild(legendItem);
+    });
+}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+    </script>
+</body>
+</html>
