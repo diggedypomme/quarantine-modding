@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Q SPR data 7</title>
+	<style>
+	body {
+		font-family: Arial, sans-serif;
+	}
+
+	.mainparts {
+		margin: 20px;
+		display: flex;
+		height: calc(100vh - 40px)
+	}
+
+	.output {
+		white-space: pre-wrap;
+		word-wrap: break-word;
+		border: 1px solid #ccc;
+		padding: 10px;
+		margin: 20px;
+		background-color: #f9f9f9;
+		flex: 1;
+		overflow: auto;
+	}
+
+	.column {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: scroll;
+	}
+
+	.image-info {
+		border: 1px solid #ddd;
+		padding: 10px;
+		margin-bottom: 10px;
+	}
+
+	.references,
+	.hex-details {
+		margin-top: 5px;
+		display: none;
+		word-break: break-all;
+	}
+
+	.references.show,
+	.hex-details.show {
+		display: block;
+	}
+
+	#previewContainer {
+		position: fixed;
+		bottom: 20px;
+		left: 20px;
+		width: 40%;
+		max-width: 300px;
+		background-color: white;
+		border: 1px solid #ccc;
+		padding: 10px;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+		max-height: 70vh;
+		display: flex;
+		flex-direction: column;
+		z-index: 1000;
+	}
+
+	#previewCanvas {
+		display: grid;
+		gap: 0px;
+		flex: 1;
+		overflow: hidden;
+		justify-content: center;
+		align-content: center;
+		height: 100%;
+	}
+
+	.preview-grid-cell {
+		aspect-ratio: 1;
+		width: 100%;
+		border: none;
+	}
+
+	.top-menu-bar {
+		display: flex;
+		/* This is already here, which is good */
+		align-items: center;
+		justify-content: flex-start;
+		/* Ensures items start from the left */
+	}
+
+	.menu-item {
+		position: relative;
+		padding: 5px 10px;
+		cursor: pointer;
+	}
+
+	.dropdown {
+		display: none;
+		position: absolute;
+		top: 100%;
+		/* Positions dropdown right below the menu item */
+		left: 0;
+		background-color: white;
+		min-width: 150px;
+		box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+		z-index: 1;
+		border: 1px solid #ddd;
+	}
+
+	.menu-item:hover .dropdown {
+		display: block;
+	}
+
+	.dropdown a {
+		color: black;
+		padding: 10px;
+		text-decoration: none;
+		display: block;
+	}
+
+	.dropdown a:hover {
+		background-color: #f1f1f1;
+	}
+
+	body {
+		margin-top: 40px;
+		/* Adjust based on menu bar height */
+	}
+	</style>
+</head>
+
+<body>
+	<div class="top-menu-bar">
+		<div class="menu-item">File <div class="dropdown">
+				<a href="#" onclick="export_sprite()">Export all sprites</a>
+	
+				<a href="#" onclick="createGifUploadModal()">Load Gif palette - I can't remember if this works!</a>
+			</div>
+		</div>
+		<div class="menu-item">Edit Sprite <div class="dropdown">
+				<a href="#" onclick="outline_images()">Apply yellow border</a>
+				<a href="#" onclick="add_image_names()">Add text to images</a>
+			</div>
+		</div>
+		<div class="menu-item">Edit selected image <div class="dropdown">
+				<a href="#" onclick="copy_inner_image()">copy inner image</a>
+				<a href="#" onclick="download_inner_image()">download inner image</a>
+				<a href="#" onclick="get_image_array_from_localStorage()">import replacement image data</a>
+			</div>
+		</div>
+
+		<div class="menu-item">Variable_printout <div class="dropdown">
+				<a href="#" onclick="varprintout('current_dict')">Full dict</a>
+				<a href="#" onclick="varprintout('current_image')">current_image</a>
+				<a href="#" onclick="varprintout('palette')">palette</a>
+			</div>
+		</div>
+	</div>
+	<div id="mainparts" class="mainparts">
+		<div class="column">
+			<h1>Q SPR data 7</h1>
+			<p>Select a file to read its content as hexadecimal:</p>
+			<input type="file" id="fileInput">
+			<div class="output" id="hexOutput"></div>
+		</div>
+		<div class="column">
+			<h2>Output</h2>
+			<p id="imageCount"></p>
+			<div id="imageDetails"></div>
+			<p id="totalPixels"></p>
+			<p id="remainingBytes"></p>
+		</div>
+		<div class="Palette_column">
+			<h2>Palette_column</h2>
+			<div id="palette_details"></div>
+		</div>
+		<div id="previewContainer" style="display: none;">
+			<h3>Image Preview <button id="randomizeColors" onclick=" re_randomise_colours()">Randomise</button></h3>
+			<BR>
+			<B>As per the note in git, I hard set the palette in my code, and need to go back and 
+			change this to remove any original game code. I will get this updated, but in the  
+			meanwhile you will need to hard set the palette in the code. Please see git
+			<BR></b><BR>
+			<div id="paletteSelectContainer">
+				<label for="paletteSelect">Select Palette:</label>
+				<select id="paletteSelect"></select>
+			</div>
+			<div id="previewCanvas"></div>
+		</div>
+	</div>
+	<script>
+	// Color generation and consistency
+	let current_dict = {}
+	document.getElementById('fileInput').addEventListener('change', function(event) {
+		const file = event.target.files[0];
+		if(!file) {
+			alert('No file selected');
+			return;
+		}
+		const filename = file.name || (file.path && file.path.split('\\').pop());
+		current_dict["sprite_name"] = filename
+		const reader = new FileReader();
+		reader.onload = function(e) {
+			const arrayBuffer = e.target.result;
+			const uint8Array = new Uint8Array(arrayBuffer);
+			console.log(["array_of_hex_decimals", uint8Array])
+			current_dict["array_of_hex_decimals"] = uint8Array
+			let hexString = '';
+			for(let i = 0; i < uint8Array.length; i++) {
+				hexString += uint8Array[i].toString(16).padStart(2, '0') + ' ';
+				if((i + 1) % 16 === 0) {
+					hexString += '\n';
+				}
+			}
+			document.getElementById('hexOutput').textContent = hexString;
+			if(uint8Array.length >= 1) {
+				const numberOfImages = uint8Array[0];
+				document.getElementById('imageCount').textContent = `Number of images: ${numberOfImages}`;
+				console.log("Number of images: " + numberOfImages)
+				current_dict["Number of images"] = numberOfImages
+				let offset = 1 + (numberOfImages * 2);
+				let full_header = 1 + (numberOfImages * 2)
+				console.log("full header " + full_header)
+				current_dict["full header"] = full_header
+				current_dict["full_header_data"] = new Uint8Array(uint8Array.slice(0, full_header)); // Store the full header as a separate Uint8Array
+				console.log(current_dict)
+				const image_data = []; // Initialize the array to store image data
+				let dataOffset = 1 + (numberOfImages * 2); // Start after the header
+				for(let i = 0; i < numberOfImages; i++) {
+					const imageId = i; // Image ID is just the index
+					const width = uint8Array[1 + (i * 2)]; // Width is at offset 1, 3, 5...
+					const height = uint8Array[1 + (i * 2) + 1]; // Height is at offset 2, 4, 6...
+					const total_image_pixels = width * height;
+					const pixels = new Uint8Array(total_image_pixels); // Create a new Uint8Array for the pixels
+					for(let p = 0; p < total_image_pixels; p++) {
+						pixels[p] = uint8Array[dataOffset + p]
+					}
+					const imageData = {
+						"image id": imageId,
+						"width": width,
+						"height": height,
+						"total_image_pixels": total_image_pixels,
+						"pixels": pixels
+					};
+					dataOffset += total_image_pixels; // Increment the offset for the next image
+					image_data.push(imageData); // Add the image data to the array
+				}
+				current_dict["image_data"] = image_data
+				current_dict["Number of images"] = numberOfImages
+				console.log(current_dict)
+				const dataWithoutHeader = uint8Array.slice(full_header);
+				const uniqueRefs = [];
+				const uniqueHexRefs = [];
+				const seenRefs = new Set();
+				const seenHexRefs = new Set();
+				for(const byte of dataWithoutHeader) {
+					if(!seenRefs.has(byte)) {
+						uniqueRefs.push(byte);
+						seenRefs.add(byte);
+					}
+					const hexByte = byte.toString(16).padStart(2, '0').toUpperCase();
+					if(!seenHexRefs.has(hexByte)) {
+						uniqueHexRefs.push(hexByte);
+						seenHexRefs.add(hexByte);
+					}
+				}
+				current_dict["unique hex refs"] = numberOfImages
+				current_dict["unique refs"] = numberOfImages
+				current_dict["Full Data (without header)"] = dataWithoutHeader
+				current_dict["Unique Decimal References (in entire data section)"] = uniqueRefs
+				current_dict["Unique Hexadecimal References (in entire data section)"] = uniqueHexRefs
+				console.log(current_dict)
+				const imageDetailsDiv = document.getElementById('imageDetails');
+				imageDetailsDiv.innerHTML = '';
+				const imageDataArray = current_dict["image_data"]; // Store in variable for efficiency
+				for(let i = 0; i < imageDataArray.length; i++) {
+					const this_image = imageDataArray[i];
+					//	console.log(this_image);
+					let imageDiv = document.createElement('div');
+					imageDiv.className = 'image-info';
+					imageDiv.innerHTML = `Image ${i + 1}: x=` + current_dict["image_data"][i]["width"] + `', y='` + current_dict["image_data"][i]["height"] + `, total length=` + current_dict["image_data"][i]["total_image_pixels"] + ` 
+                                <button class="toggle-references">+</button>
+                                <button id="preview_${i}" class="preview-button" data-x="${current_dict["image_data"][i]["width"]}" data-y="${current_dict["image_data"][i]["height"]}" data-refs="${i}">Preview</button>
+                                <button class="toggle-hex">Hex</button>
+                                <div class="references"></div>
+                                <div class="hex-details"></div>`;
+					//console.log(imageDiv)
+					const previewButton = imageDiv.querySelector('.preview-button');
+					previewButton.addEventListener('click', function() {
+						const x = current_dict["image_data"][i]["width"];
+						const y = current_dict["image_data"][i]["height"];
+						const refs = current_dict["image_data"][i]["pixels"];
+						current_dict["currently_selected"] = i
+						renderPreview(x, y, this.closest('.image-info').querySelector('.references'), refs);
+						console.log(current_dict)
+					});
+					const hexDetailsDiv = imageDiv.querySelector('.hex-details');
+					let pixels = current_dict["image_data"][i]["pixels"];
+					let hexArray = [];
+					imageDetailsDiv.appendChild(imageDiv);
+				}
+				document.getElementById('totalPixels').textContent = `Total pixels from all images: ${current_dict["array_of_hex_decimals"].length}`;
+				//const remainingBytes = uint8Array.length - offset - (numberOfImages * 4096);
+				//document.getElementById('remainingBytes').textContent = `Remaining bytes: ${remainingBytes}`;
+			} else {
+				document.getElementById('imageCount').textContent = `Number of images: Not available (file too small)`;
+			}
+		};
+		reader.onerror = function() {
+			alert('Error reading file');
+		};
+		reader.readAsArrayBuffer(file);
+	});
+
+	function re_randomise_colours() {
+		generateRandomPalette()
+		selected = current_dict["currently_selected"]
+		let x = current_dict["image_data"][selected]["width"];
+		let y = current_dict["image_data"][selected]["height"];
+		let refs = current_dict["image_data"][selected]["pixels"];
+		//current_dict["currently_selected"]=i
+		//renderPreview(x, y, this.closest('.image-info').querySelector('.references'), refs);
+		//console.log(current_dict)
+		console.log(current_dict)
+		let preview_name = selected
+		console.log(["preview_name", selected])
+		document.getElementById("preview_" + selected).click()
+		//"${current_dict["image_data"][i]["height"]}
+		// // Find the preview button that was last used to generate the preview
+		//  const previewButtons = document.querySelectorAll('.preview-button');
+		//  const lastPreviewButton = previewButtons[previewButtons.length - 1];
+		//  
+		//  if (lastPreviewButton) {
+		//      // Trigger a click on the last preview button to regenerate with the same parameters
+		//      lastPreviewButton.click();
+		//  }
+	}
+	//
+	// Color palettes with localStorage persistence and dynamic management
+	const colorPalettes = {
+		random: {},
+		incremental: {},
+		predefined: {}
+	};
+	// Predefined palettes
+	const predefinedPaletteConfigs = {
+		'grayscale': () => {
+			const palette = {};
+			for(let i = 0; i < 256; i++) {
+				palette[i] = `rgb(${i}, ${i}, ${i})`;
+			}
+			return palette;
+		},
+		'rainbow': () => {
+			const palette = {};
+			for(let i = 0; i < 256; i++) {
+				const hue = (i / 256) * 360;
+				const rgb = hslToRgb(hue, 100, 50);
+				palette[i] = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+			}
+			return palette;
+		},
+		'ocean': () => {
+			const palette = {};
+			for(let i = 0; i < 256; i++) {
+				const r = Math.floor(Math.max(0, 50 - Math.abs(128 - i)));
+				const g = Math.floor(Math.max(0, 100 - Math.abs(128 - i)));
+				const b = Math.floor(255 * Math.sin(i / 256 * Math.PI));
+				palette[i] = `rgb(${r}, ${g}, ${b})`;
+			}
+			return palette;
+		},
+		// NOTE THIS IS WHERE YOU NEED TO ENTER THE KFLOOR or whichever palette. I will look at getting this all updated so that you can import the GIF files and set it automatically, but I'm rushing to get all the tools out, and it has been a few months since I worked on this, so I will need to come back to it.
+		'kfloor': () => {
+			palette = {           
+				0: 'rgb0,0,0',
+				1: 'rgb0,0,0',
+				2: 'rgb0,0,0',
+				3: 'rgb0,0,0',
+				4: 'rgb0,0,0',
+				5: 'rgb0,0,0',
+				6: 'rgb0,0,0',
+				7: 'rgb0,0,0',
+				8: 'rgb0,0,0',
+				9: 'rgb0,0,0',
+				10: 'rgb0,0,0',
+				11: 'rgb0,0,0',
+				12: 'rgb0,0,0',
+				13: 'rgb0,0,0',
+				14: 'rgb0,0,0',
+				15: 'rgb0,0,0',
+				16: 'rgb0,0,0',
+				17: 'rgb0,0,0',
+				18: 'rgb0,0,0',
+				19: 'rgb0,0,0',
+				20: 'rgb0,0,0',
+				21: 'rgb0,0,0',
+				22: 'rgb0,0,0',
+				23: 'rgb0,0,0',
+				24: 'rgb0,0,0',
+				25: 'rgb0,0,0',
+				26: 'rgb0,0,0',
+				27: 'rgb0,0,0',
+				28: 'rgb0,0,0',
+				29: 'rgb0,0,0',
+				30: 'rgb0,0,0',
+				31: 'rgb0,0,0',
+				32: 'rgb0,0,0',
+				33: 'rgb0,0,0',
+				34: 'rgb0,0,0',
+				35: 'rgb0,0,0',
+				36: 'rgb0,0,0',
+				37: 'rgb0,0,0',
+				38: 'rgb0,0,0',
+				39: 'rgb0,0,0',
+				40: 'rgb0,0,0',
+				41: 'rgb0,0,0',
+				42: 'rgb0,0,0',
+				43: 'rgb0,0,0',
+				44: 'rgb0,0,0',
+				45: 'rgb0,0,0',
+				46: 'rgb0,0,0',
+				47: 'rgb0,0,0',
+				48: 'rgb0,0,0',
+				49: 'rgb0,0,0',
+				50: 'rgb0,0,0',
+				51: 'rgb0,0,0',
+				52: 'rgb0,0,0',
+				53: 'rgb0,0,0',
+				54: 'rgb0,0,0',
+				55: 'rgb0,0,0',
+				56: 'rgb0,0,0',
+				57: 'rgb0,0,0',
+				58: 'rgb0,0,0',
+				59: 'rgb0,0,0',
+				60: 'rgb0,0,0',
+				61: 'rgb0,0,0',
+				62: 'rgb0,0,0',
+				63: 'rgb0,0,0',
+				64: 'rgb0,0,0',
+				65: 'rgb0,0,0',
+				66: 'rgb0,0,0',
+				67: 'rgb0,0,0',
+				68: 'rgb0,0,0',
+				69: 'rgb0,0,0',
+				70: 'rgb0,0,0',
+				71: 'rgb0,0,0',
+				72: 'rgb0,0,0',
+				73: 'rgb0,0,0',
+				74: 'rgb0,0,0',
+				75: 'rgb0,0,0',
+				76: 'rgb0,0,0',
+				77: 'rgb0,0,0',
+				78: 'rgb0,0,0',
+				79: 'rgb0,0,0',
+				80: 'rgb0,0,0',
+				81: 'rgb0,0,0',
+				82: 'rgb0,0,0',
+				83: 'rgb0,0,0',
+				84: 'rgb0,0,0',
+				85: 'rgb0,0,0',
+				86: 'rgb0,0,0',
+				87: 'rgb0,0,0',
+				88: 'rgb0,0,0',
+				89: 'rgb0,0,0',
+				90: 'rgb0,0,0',
+				91: 'rgb0,0,0',
+				92: 'rgb0,0,0',
+				93: 'rgb0,0,0',
+				94: 'rgb0,0,0',
+				95: 'rgb0,0,0',
+				96: 'rgb0,0,0',
+				97: 'rgb0,0,0',
+				98: 'rgb0,0,0',
+				99: 'rgb0,0,0',
+				100: 'rgb0,0,0',
+				101: 'rgb0,0,0',
+				102: 'rgb0,0,0',
+				103: 'rgb0,0,0',
+				104: 'rgb0,0,0',
+				105: 'rgb0,0,0',
+				106: 'rgb0,0,0',
+				107: 'rgb0,0,0',
+				108: 'rgb0,0,0',
+				109: 'rgb0,0,0',
+				110: 'rgb0,0,0',
+				111: 'rgb0,0,0',
+				112: 'rgb0,0,0',
+				113: 'rgb0,0,0',
+				114: 'rgb0,0,0',
+				115: 'rgb0,0,0',
+				116: 'rgb0,0,0',
+				117: 'rgb0,0,0',
+				118: 'rgb0,0,0',
+				119: 'rgb0,0,0',
+				120: 'rgb0,0,0',
+				121: 'rgb0,0,0',
+				122: 'rgb0,0,0',
+				123: 'rgb0,0,0',
+				124: 'rgb0,0,0',
+				125: 'rgb0,0,0',
+				126: 'rgb0,0,0',
+				127: 'rgb0,0,0',
+				128: 'rgb0,0,0',
+				129: 'rgb0,0,0',
+				130: 'rgb0,0,0',
+				131: 'rgb0,0,0',
+				132: 'rgb0,0,0',
+				133: 'rgb0,0,0',
+				134: 'rgb0,0,0',
+				135: 'rgb0,0,0',
+				136: 'rgb0,0,0',
+				137: 'rgb0,0,0',
+				138: 'rgb0,0,0',
+				139: 'rgb0,0,0',
+				140: 'rgb0,0,0',
+				141: 'rgb0,0,0',
+				142: 'rgb0,0,0',
+				143: 'rgb0,0,0',
+				144: 'rgb0,0,0',
+				145: 'rgb0,0,0',
+				146: 'rgb0,0,0',
+				147: 'rgb0,0,0',
+				148: 'rgb0,0,0',
+				149: 'rgb0,0,0',
+				150: 'rgb0,0,0',
+				151: 'rgb0,0,0',
+				152: 'rgb0,0,0',
+				153: 'rgb0,0,0',
+				154: 'rgb0,0,0',
+				155: 'rgb0,0,0',
+				156: 'rgb0,0,0',
+				157: 'rgb0,0,0',
+				158: 'rgb0,0,0',
+				159: 'rgb0,0,0',
+				160: 'rgb0,0,0',
+				161: 'rgb0,0,0',
+				162: 'rgb0,0,0',
+				163: 'rgb0,0,0',
+				164: 'rgb0,0,0',
+				165: 'rgb0,0,0',
+				166: 'rgb0,0,0',
+				167: 'rgb0,0,0',
+				168: 'rgb0,0,0',
+				169: 'rgb0,0,0',
+				170: 'rgb0,0,0',
+				171: 'rgb0,0,0',
+				172: 'rgb0,0,0',
+				173: 'rgb0,0,0',
+				174: 'rgb0,0,0',
+				175: 'rgb0,0,0',
+				176: 'rgb0,0,0',
+				177: 'rgb0,0,0',
+				178: 'rgb0,0,0',
+				179: 'rgb0,0,0',
+				180: 'rgb0,0,0',
+				181: 'rgb0,0,0',
+				182: 'rgb0,0,0',
+				183: 'rgb0,0,0',
+				184: 'rgb0,0,0',
+				185: 'rgb0,0,0',
+				186: 'rgb0,0,0',
+				187: 'rgb0,0,0',
+				188: 'rgb0,0,0',
+				189: 'rgb0,0,0',
+				190: 'rgb0,0,0',
+				191: 'rgb0,0,0',
+				192: 'rgb0,0,0',
+				193: 'rgb0,0,0',
+				194: 'rgb0,0,0',
+				195: 'rgb0,0,0',
+				196: 'rgb0,0,0',
+				197: 'rgb0,0,0',
+				198: 'rgb0,0,0',
+				199: 'rgb0,0,0',
+				200: 'rgb0,0,0',
+				201: 'rgb0,0,0',
+				202: 'rgb0,0,0',
+				203: 'rgb0,0,0',
+				204: 'rgb0,0,0',
+				205: 'rgb0,0,0',
+				206: 'rgb0,0,0',
+				207: 'rgb0,0,0',
+				208: 'rgb0,0,0',
+				209: 'rgb0,0,0',
+				210: 'rgb0,0,0',
+				211: 'rgb0,0,0',
+				212: 'rgb0,0,0',
+				213: 'rgb0,0,0',
+				214: 'rgb0,0,0',
+				215: 'rgb0,0,0',
+				216: 'rgb0,0,0',
+				217: 'rgb0,0,0',
+				218: 'rgb0,0,0',
+				219: 'rgb0,0,0',
+				220: 'rgb0,0,0',
+				221: 'rgb0,0,0',
+				222: 'rgb0,0,0',
+				223: 'rgb0,0,0',
+				224: 'rgb0,0,0',
+				225: 'rgb0,0,0',
+				226: 'rgb0,0,0',
+				227: 'rgb0,0,0',
+				228: 'rgb0,0,0',
+				229: 'rgb0,0,0',
+				230: 'rgb0,0,0',
+				231: 'rgb0,0,0',
+				232: 'rgb0,0,0',
+				233: 'rgb0,0,0',
+				234: 'rgb0,0,0',
+				235: 'rgb0,0,0',
+				236: 'rgb0,0,0',
+				237: 'rgb0,0,0',
+				238: 'rgb0,0,0',
+				239: 'rgb0,0,0',
+				240: 'rgb0,0,0',
+				241: 'rgb0,0,0',
+				242: 'rgb0,0,0',
+				243: 'rgb0,0,0',
+				244: 'rgb0,0,0',
+				245: 'rgb0,0,0',
+				246: 'rgb0,0,0',
+				247: 'rgb0,0,0',
+				248: 'rgb0,0,0',
+				249: 'rgb0,0,0',
+				250: 'rgb0,0,0',
+				251: 'rgb0,0,0',
+				252: 'rgb0,0,0',
+				253: 'rgb0,0,0',
+				254: 'rgb0,0,0',
+				255: 'rgb(255,0,255)'
+			}
+			return palette;
+		},
+		// it doesnt look to work with pfloor. you need to get that fixed later
+	};
+	// Utility function to convert HSL to RGB
+	function hslToRgb(h, s, l) {
+		h /= 360;
+		s /= 100;
+		l /= 100;
+		let r, g, b;
+		if(s === 0) {
+			r = g = b = l;
+		} else {
+			const hue2rgb = (p, q, t) => {
+				if(t < 0) t += 1;
+				if(t > 1) t -= 1;
+				if(t < 1 / 6) return p + (q - p) * 6 * t;
+				if(t < 1 / 2) return q;
+				if(t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+				return p;
+			};
+			const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+			const p = 2 * l - q;
+			r = hue2rgb(p, q, h + 1 / 3);
+			g = hue2rgb(p, q, h);
+			b = hue2rgb(p, q, h - 1 / 3);
+		}
+		return [
+			Math.round(r * 255),
+			Math.round(g * 255),
+			Math.round(b * 255)
+		];
+	}
+
+	function saveColorPalette(type, palette) {
+		try {
+			localStorage.setItem(`colorPalette_${type}`, JSON.stringify(palette));
+		} catch (error) {
+			console.error('Error saving color palette to localStorage:', error);
+		}
+	}
+
+	function loadColorPalette(type) {
+		try {
+			const savedPalette = localStorage.getItem(`colorPalette_${type}`);
+			return savedPalette ? JSON.parse(savedPalette) : null;
+		} catch (error) {
+			console.error('Error loading color palette from localStorage:', error);
+			return null;
+		}
+	}
+
+	function generateRandomPalette() {
+		const palette = {};
+		for(let i = 0; i < 256; i++) {
+			palette[i] = `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
+		}
+		colorPalettes.random = palette;
+		saveColorPalette('random', palette);
+		return palette;
+	}
+
+	function generateIncrementalPalette() {
+		const palette = {};
+		const increment = 256 / 256;
+		for(let i = 0; i < 256; i++) {
+			const r = Math.floor(i * increment);
+			const g = Math.floor((255 - i) * increment);
+			const b = Math.floor(Math.abs(Math.sin(i / 256 * Math.PI) * 255));
+			palette[i] = `rgb(${r}, ${g}, ${b})`;
+		}
+		colorPalettes.incremental = palette;
+		saveColorPalette('incremental', palette);
+		return palette;
+	}
+
+	function generatePredefinedPalette(paletteName) {
+		if(predefinedPaletteConfigs[paletteName]) {
+			const palette = predefinedPaletteConfigs[paletteName]();
+			colorPalettes.predefined[paletteName] = palette;
+			saveColorPalette(`predefined_${paletteName}`, palette);
+			return palette;
+		}
+		throw new Error(`Palette '${paletteName}' not found`);
+	}
+	// Initialize palettes
+	function initializePalettes() {
+		// Try to load from localStorage first
+		const loadedRandomPalette = loadColorPalette('random');
+		const loadedIncrementalPalette = loadColorPalette('incremental');
+		// If loaded palettes exist, use them
+		if(loadedRandomPalette) {
+			colorPalettes.random = loadedRandomPalette;
+		} else {
+			// Otherwise generate and save a new random palette
+			generateRandomPalette();
+		}
+		if(loadedIncrementalPalette) {
+			colorPalettes.incremental = loadedIncrementalPalette;
+		} else {
+			// Otherwise generate and save a new incremental palette
+			generateIncrementalPalette();
+		}
+		// Initialize predefined palettes
+		Object.keys(predefinedPaletteConfigs).forEach(paletteName => {
+			const loadedPredefinedPalette = loadColorPalette(`predefined_${paletteName}`);
+			if(loadedPredefinedPalette) {
+				colorPalettes.predefined[paletteName] = loadedPredefinedPalette;
+			} else {
+				generatePredefinedPalette(paletteName);
+			}
+		});
+	}
+	// Function to regenerate a specific palette type
+	function regeneratePalette(type, name) {
+		switch (type) {
+			case 'random':
+				return generateRandomPalette();
+			case 'incremental':
+				return generateIncrementalPalette();
+			case 'predefined':
+				return generatePredefinedPalette(name);
+			default:
+				throw new Error('Invalid palette type');
+		}
+	}
+	// Current selection tracking
+	let currentPaletteType = 'predefined';
+	let currentPaletteName = "rainbow";
+
+	function updatePaletteDropdown() {
+		const paletteSelect = document.getElementById('paletteSelect');
+		paletteSelect.innerHTML = ''; // Clear existing options
+		// Add base palettes
+		const baseTypes = ['random', 'incremental'];
+		baseTypes.forEach(type => {
+			const option = document.createElement('option');
+			option.value = type;
+			option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+			paletteSelect.appendChild(option);
+		});
+		// Add predefined palettes
+		const predefinedTypes = Object.keys(colorPalettes.predefined);
+		if(predefinedTypes.length > 0) {
+			const predefinedOptgroup = document.createElement('optgroup');
+			predefinedOptgroup.label = 'Predefined';
+			predefinedTypes.forEach(paletteName => {
+				const option = document.createElement('option');
+				option.value = `predefined_${paletteName}`;
+				option.textContent = paletteName.charAt(0).toUpperCase() + paletteName.slice(1);
+				predefinedOptgroup.appendChild(option);
+			});
+			paletteSelect.appendChild(predefinedOptgroup);
+		}
+		// Set the current palette as selected
+		if(currentPaletteType === 'predefined') {
+			paletteSelect.value = `predefined_${currentPaletteName}`;
+		} else {
+			paletteSelect.value = currentPaletteType;
+		}
+	}
+
+	function getCurrentPalette() {
+		if(currentPaletteType === 'predefined') {
+			return colorPalettes.predefined[currentPaletteName] || generatePredefinedPalette(currentPaletteName);
+		}
+		return colorPalettes[currentPaletteType] || (currentPaletteType === 'random' ? generateRandomPalette() : generateIncrementalPalette());
+	}
+
+	function generate_palette_column() {
+		console.log("Creating palette column");
+		// Get the palette_details element
+		let palette_details = document.getElementById("palette_details");
+		// Ensure palette_details exists to avoid runtime errors
+		if(!palette_details) {
+			console.error("Element with ID 'palette_details' not found.");
+			return;
+		}
+		// Add palette name
+		const palette_name = document.createElement('div');
+		palette_name.innerHTML = `<br><br>Palette name is SOMETHING<br><br><br>`;
+		palette_name.id = "palette_name"
+		palette_details.append(palette_name);
+		// Create palette columns
+		for(let i = 0; i < 256; i++) {
+			// Create a wrapper for each palette row
+			const palette_div = document.createElement('div');
+			palette_div.className = 'palette-row';
+			palette_div.id = 'palette-row_' + i;
+			// Generate a color (for example, a gradient from red to blue)
+			const color = `rgb(122 0 255)`;
+			// Create the color box
+			const color_box = document.createElement('div');
+			color_box.id = 'color_box_' + i;
+			color_box.style.width = '20px';
+			color_box.style.height = '20px';
+			color_box.style.backgroundColor = color;
+			color_box.style.display = 'inline-block';
+			color_box.style.marginRight = '10px';
+			// Add the color box and ID to the row
+			const palette_id = document.createElement('span');
+			palette_id.innerHTML = `<b>ID: ${i}</b> - color - <div style="display:inline;" id="colour_text_${i}">${color}</div>`;
+			palette_div.append(color_box, palette_id);
+			// Append the row to palette_details
+			palette_details.append(palette_div);
+		}
+	}
+	generate_palette_column();
+
+	function update_palette_using_loop() {
+		let colourdict = getCurrentPalette()
+		console.log("Updating palette column with new RGB colors hi");
+		console.log(colourdict);
+		//console.log(colourdict.length);
+		console.log(Object.keys(colourdict).length)
+		let i = 0
+		while(i < Object.keys(colourdict).length) {
+			//console.log([i,colourdict[i]])
+			// Update the color box
+			let color_box = document.getElementById("color_box_" + i);
+			//  console.log(color_box)
+			//color_box.style.backgroundColor = 'rgb(202, 245, 146)';
+			color_box.style.backgroundColor = colourdict[i];
+			// Update the text
+			let colour_text = document.getElementById("colour_text_" + i)
+			i = i + 1
+		}
+		// Loop through the provided colors
+		for(let i = 0; i < Object.keys(colourdict).length; i++) {
+			// Generate the ID for the palette row
+			//  colour_text.innerHTML = `test`;
+		}
+	}
+
+	function updatePreviewWithCurrentPalette(width, height, references) {
+		const previewContainer = document.getElementById('previewContainer');
+		const previewCanvas = document.getElementById('previewCanvas');
+		previewContainer.style.display = 'block';
+		previewCanvas.innerHTML = '';
+		previewCanvas.style.gridTemplateColumns = `repeat(${width}, 1fr)`;
+		const currentPalette = getCurrentPalette();
+		const totalCells = Math.min(width * height, references.length);
+		for(let i = 0; i < totalCells; i++) {
+			const cell = document.createElement('div');
+			cell.classList.add('preview-grid-cell');
+			const colorSeed = references[i];
+			cell.style.backgroundColor = currentPalette[colorSeed] || 'black';
+			previewCanvas.appendChild(cell);
+		}
+	}
+	// Modify renderPreview to use the new palette system
+	function renderPreview(width, height, referencesDiv, references) {
+		// Update palette dropdown
+		updatePaletteDropdown();
+		// Add event listener to palette select
+		const paletteSelect = document.getElementById('paletteSelect');
+		paletteSelect.addEventListener('change', function() {
+			const selectedValue = this.value;
+			if(selectedValue.startsWith('predefined_')) {
+				currentPaletteType = 'predefined';
+				currentPaletteName = selectedValue.replace('predefined_', '');
+			} else {
+				currentPaletteType = selectedValue;
+				currentPaletteName = null;
+			}
+			updatePreviewWithCurrentPalette(width, height, references);
+			update_palette_using_loop()
+			palette_name.innerHTML = `<br><br>Palette name is ` + selectedValue + `<br><br><br>`
+		});
+		// Initial render
+		updatePreviewWithCurrentPalette(width, height, references);
+		update_palette_using_loop()
+	}
+	// Initialize palettes when script loads
+	initializePalettes();
+
+	function setPerimeterToOnes(image_data_id) {
+		console.log(["image_data_id", image_data_id]);
+		let width = current_dict["image_data"][image_data_id]["width"];
+		let height = current_dict["image_data"][image_data_id]["height"];
+		let pixels = current_dict["image_data"][image_data_id]["pixels"];
+		console.log(["width", width]);
+		console.log(["height", height]);
+		console.log(["pixels", pixels]);
+		// Create a new Uint8Array with the same length as the original
+		let result = new Uint8Array(pixels.length);
+		// Fill in the interior first
+		result.set(pixels);
+		// Update the perimeter values
+		for(let i = 0; i < height; i++) {
+			for(let j = 0; j < width; j++) {
+				if(i === 0 || i === height - 1 || j === 0 || j === width - 1) {
+					result[i * width + j] = 1;
+				}
+			}
+		}
+		return result;
+	}
+	let modified_perimiter
+
+	function outline_images() {
+		current_dict["image_data"].forEach((image, arrayNumber) => {
+			modified_perimiter = setPerimeterToOnes(arrayNumber)
+			console.log(modified_perimiter)
+			current_dict["image_data"][arrayNumber]["pixels"] = modified_perimiter;
+		});
+	}
+
+	function export_sprite() {
+		console.log("Exporting " + current_dict["sprite_name"]);
+		console.log("Full Header Data:", current_dict["full_header_data"]); // More descriptive log
+		console.log("Full Header Length:", current_dict["full_header_data"].length); // Log the length
+		// Prepare data for export
+		let outputArray = new Uint8Array(); // Initialize empty Uint8Array
+		// 1. Add the header
+		if(current_dict["full_header_data"]) {
+			outputArray = concatenateTypedArrays(outputArray, current_dict["full_header_data"]);
+			console.log("Header added. Total length now:", outputArray.length);
+		} else {
+			console.error("No header data found!");
+			return; // Stop if no header
+		}
+		// 2. Add image data from each image section
+		if(current_dict["image_data"]) {
+			for(const imageData of Object.values(current_dict["image_data"])) { // Iterate through image data objects
+				if(imageData && imageData.pixels) {
+					outputArray = concatenateTypedArrays(outputArray, imageData.pixels);
+					console.log(`Image data added. Total length now: ${outputArray.length}`);
+				} else {
+					console.warn("Image data or pixels missing for an image.");
+				}
+			}
+		} else {
+			console.warn("No image data found!");
+		}
+		// Function to concatenate typed arrays (important!)
+		function concatenateTypedArrays(a, b) {
+			let c = new Uint8Array(a.length + b.length);
+			c.set(a, 0);
+			c.set(b, a.length);
+			return c;
+		}
+		// 3. Convert to hex string for download (optional, for display/debugging)
+		let hexString = '';
+		for(let i = 0; i < outputArray.length; i++) {
+			hexString += outputArray[i].toString(16).padStart(2, '0') + ' ';
+			if((i + 1) % 16 === 0) {
+				hexString += '\n';
+			}
+		}
+		console.log("Hex Output:\n", hexString); // Log the hex output
+		// 4. Create a Blob and initiate download
+		const blob = new Blob([outputArray], {
+			type: 'application/octet-stream'
+		}); // Important: Set correct MIME type
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = current_dict["sprite_name"]; // Correct file extension
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url); // Clean up
+	}
+	const fontData = {
+		'0': [0x1F, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1F, 0x00],
+		'1': [0x08, 0x18, 0x08, 0x08, 0x08, 0x08, 0x1F, 0x00],
+		'2': [0x1F, 0x01, 0x01, 0x1F, 0x10, 0x10, 0x1F, 0x00],
+		'3': [0x1F, 0x01, 0x01, 0x1F, 0x01, 0x01, 0x1F, 0x00],
+		'4': [0x10, 0x10, 0x10, 0x1F, 0x01, 0x01, 0x01, 0x00],
+		'5': [0x1F, 0x10, 0x10, 0x1F, 0x01, 0x01, 0x1F, 0x00],
+		'6': [0x1F, 0x10, 0x10, 0x1F, 0x11, 0x11, 0x1F, 0x00],
+		'7': [0x1F, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00],
+		'8': [0x1F, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x1F, 0x00],
+		'9': [0x1F, 0x11, 0x11, 0x1F, 0x01, 0x01, 0x1F, 0x00],
+		'_': [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00],
+		'-': [0x00, 0x00, 0x00, 0x1C, 0x00, 0x00, 0x00, 0x00], // Hyphen (-)
+	};
+
+	function add_image_names() {
+		let spriteNumber = 0; // Default to 0
+		const spriteName = current_dict["sprite_name"];
+		console.log(spriteName)
+		let cleanedName = spriteName.replace(/KWALL/i, "");
+		// Remove ".SPR" (case-insensitive)
+		cleanedName = cleanedName.replace(/\.SPR/i, "");
+		console.log("cleanedName: " + cleanedName)
+		console.log("add_image_names")
+		current_dict["image_data"].forEach((image, arrayNumber) => {
+			let image_data_id = arrayNumber
+			output_text = cleanedName + "-" + (image_data_id + 1)
+			modified_text = add_text_to_image(image_data_id, output_text, 2)
+			console.log(modified_text)
+		});
+	}
+
+	function add_text_to_image(image_data_id, text, scale = 2) {
+		console.log(["image_data_id", image_data_id, "text", text]);
+		let width = current_dict["image_data"][image_data_id]["width"];
+		let height = current_dict["image_data"][image_data_id]["height"];
+		let pixels = current_dict["image_data"][image_data_id]["pixels"];
+		console.log(["width", width]);
+		console.log(["height", height]);
+		console.log(["pixels", pixels]);
+		// Create a copy of the original pixels for comparison
+		const originalPixels = new Uint8Array(pixels);
+		let result = new Uint8Array(pixels.length);
+		result.set(pixels);
+		const scaledCharWidth = 5 * scale;
+		const scaledCharHeight = 8 * scale;
+		const textWidth = text.length * (scaledCharWidth + scale); // Include spacing
+		const startX = Math.floor((width - textWidth) / 2);
+		const startY = Math.floor((height - scaledCharHeight) / 2);
+		if(startX >= 0 && startY >= 0) {
+			for(let charIndex = 0; charIndex < text.length; charIndex++) {
+				const char = text[charIndex];
+				const charData = fontData[char];
+				if(charData) {
+					for(let y = 0; y < 8; y++) {
+						for(let x = 0; x < 5; x++) {
+							if(charData[y] & (1 << (4 - x))) {
+								for(let sy = 0; sy < scale; sy++) { // Scale vertically
+									for(let sx = 0; sx < scale; sx++) { // Scale horizontally
+										const pixelX = startX + (charIndex * (scaledCharWidth + scale)) + (x * scale) + sx;
+										const pixelY = startY + (y * scale) + sy;
+										if(pixelX >= 0 && pixelX < width && pixelY >= 0 && pixelY < height) {
+											result[pixelY * width + pixelX] = 1;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		current_dict["image_data"][image_data_id]["pixels"] = result;
+		// Compare the original and modified pixels
+		let changes = [];
+		for(let i = 0; i < pixels.length; i++) {
+			if(originalPixels[i] !== result[i]) {
+				changes.push({
+					index: i,
+					original: originalPixels[i],
+					modified: result[i]
+				});
+			}
+		}
+		if(changes.length > 0) {
+			console.log(`Changes made to pixels for image ${image_data_id}:`, changes);
+		} else {
+			console.log(`No changes were made to the pixels for image ${image_data_id}.`);
+		}
+	}
+
+	function copy_inner_image() {
+		let selected = current_dict["currently_selected"];
+		let pixels = current_dict["image_data"][selected]["pixels"];
+		let width = current_dict["image_data"][selected]["width"];
+		let height = current_dict["image_data"][selected]["height"];
+		let newImageData = []; // Array to store new image data
+		for(let p = 0; p < pixels.length; p++) {
+			const newColor = getPaletteColor(pixels[p]);
+			newImageData.push(newColor); // Add the new color to the new image data
+		}
+		console.log(newImageData)
+		pixelsToClipboardImage(newImageData, width, height)
+	}
+
+	function getPaletteColor(idnum) {
+		return (getCurrentPalette()[idnum])
+	}
+
+	function varprintout(the_variable) {
+		console.log("varprintout")
+		if(the_variable == "current_dict") {
+			console.log("current_dict")
+			console.log(current_dict)
+		} else if(the_variable == "current_image") {
+			console.log("current_image")
+			console.log(current_dict["image_data"][current_dict["currently_selected"]])
+		} else if(the_variable == "palette") {
+			console.log("palette")
+			console.log(getCurrentPalette())
+		}
+	}
+
+	function pixelsToClipboardImage(pixelArray, width, height) {
+		// Validate inputs
+		if(!Array.isArray(pixelArray)) {
+			throw new Error('Input must be an array of pixel colors');
+		}
+		if(pixelArray.length !== width * height) {
+			throw new Error(`Pixel array length (${pixelArray.length}) must match width * height (${width * height})`);
+		}
+		// Create a canvas to draw the pixels
+		const canvas = document.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		const ctx = canvas.getContext('2d');
+		// Create image data
+		const imageData = ctx.createImageData(width, height);
+		// Convert RGB strings to image data
+		pixelArray.forEach((pixel, index) => {
+			// Extract RGB values
+			const match = pixel.match(/rgb\((\d+),(\d+),(\d+)\)/);
+			if(!match) throw new Error(`Invalid RGB format: ${pixel}`);
+			const [r, g, b] = match.slice(1).map(Number);
+			const dataIndex = index * 4;
+			// Set pixel data (R, G, B, A)
+			imageData.data[dataIndex] = r;
+			imageData.data[dataIndex + 1] = g;
+			imageData.data[dataIndex + 2] = b;
+			imageData.data[dataIndex + 3] = 255; // Full opacity
+		});
+		// Put image data on canvas
+		ctx.putImageData(imageData, 0, 0);
+		// Convert to blob
+		canvas.toBlob(blob => {
+			// Write blob to clipboard
+			navigator.clipboard.write([
+				new ClipboardItem({
+					'image/png': blob
+				})
+			]).then(() => {
+				console.log('Image copied to clipboard');
+			}).catch(err => {
+				console.error('Failed to copy image to clipboard', err);
+			});
+		}, 'image/png');
+	}
+
+	function replace_image_with_array(imagenumber, array) {
+		console.log("updating image " + imagenumber)
+		//current_dict["image_data"][selected]["pixels"]=array
+		//const array_to_dict = array.reduce((accumulator, currentValue, index) => {
+		//  accumulator[index] = currentValue;
+		//  return accumulator;
+		//}, {}); // Important: Start with an empty object
+		//console.log(array_to_dict
+		//)
+		const uintArray = new Uint8Array(5);
+		console.log(uintArray); // Output: Uint8Array(5) [ 0, 0, 0, 0, 0 ]
+		// Create a Uint8Array with specific values
+		const uintArrayWithValues = new Uint8Array([1, 2, 3, 4, 5]);
+		console.log(uintArrayWithValues); // Output: Uint8Array(5) [ 1, 2, 3, 4, 5 ]
+		const uintArrayWithValues2 = new Uint8Array(array);
+		current_dict["image_data"][imagenumber]["pixels"] = uintArrayWithValues2
+	}
+	// You can later retrieve it like this:
+	function get_image_array_from_localStorage() {
+		let storedImageArray = localStorage.getItem('updated_image');
+		if(storedImageArray) {
+			// Parse the JSON string back into an array
+			const imageArray = JSON.parse(storedImageArray);
+			console.log("Retrieved image_array from localStorage:", imageArray);
+			replace_image_with_array(current_dict["currently_selected"], imageArray)
+		} else {
+			console.log("No image_array found in localStorage.");
+			return null;
+		}
+	}
+
+	function extractGifPalette(file) {
+		return new Promise((resolve, reject) => {
+			// Create an image element to load the GIF
+			const img = new Image();
+			const canvas = document.createElement('canvas');
+			const ctx = canvas.getContext('2d');
+			img.onload = function() {
+				// Set canvas size to match image
+				canvas.width = img.width;
+				canvas.height = img.height;
+				// Draw image onto canvas
+				ctx.drawImage(img, 0, 0);
+				// Get image data
+				const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+				// Create object to store unique colors
+				const colors = new Map();
+				let colorIndex = 0;
+				// Process pixels
+				for(let i = 0; i < imageData.length; i += 4) {
+					const r = imageData[i];
+					const g = imageData[i + 1];
+					const b = imageData[i + 2];
+					const rgbKey = `rgb(${r},${g},${b})`;
+					if(!colors.has(rgbKey)) {
+						colors.set(rgbKey, colorIndex);
+						colorIndex++;
+					}
+				}
+				// Convert to desired format
+				const palette = {};
+				colors.forEach((index, color) => {
+					palette[index] = color;
+				});
+				console.log('palette=', palette);
+				resolve(palette);
+			};
+			img.onerror = reject;
+			// Create object URL from file
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				img.src = e.target.result;
+			};
+			reader.readAsDataURL(file);
+		});
+	}
+
+	function createGifUploadModal() {
+		// Create container
+		const container = document.createElement('div');
+		container.id = 'gifUploadContainer';
+		container.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        width: 400px;
+        text-align: center;
+    `;
+		// Create close button
+		const closeBtn = document.createElement('button');
+		closeBtn.innerHTML = '×';
+		closeBtn.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 20px;
+    `;
+		closeBtn.onclick = () => container.remove();
+		// Create file input
+		const gifFileInput = document.createElement('input');
+		gifFileInput.id = 'gifUploadInput';
+		gifFileInput.type = 'file';
+		gifFileInput.accept = '.gif';
+		// Create preview area
+		const previewArea = document.createElement('div');
+		previewArea.id = 'gifPreviewArea';
+		previewArea.style.marginTop = '10px';
+		// Add event listener
+		gifFileInput.addEventListener('change', function(e) {
+			const gifFile = e.target.files[0];
+			if(gifFile) {
+				extractGifPalette(gifFile).catch(error => console.error('Error processing GIF:', error));
+				// Preview the GIF
+				const reader = new FileReader();
+				reader.onload = function(e) {
+					const img = document.createElement('img');
+					img.src = e.target.result;
+					img.style.maxWidth = '100%';
+					previewArea.innerHTML = '';
+					previewArea.appendChild(img);
+				};
+				reader.readAsDataURL(gifFile);
+			}
+		});
+		// Assemble the modal
+		container.appendChild(closeBtn);
+		container.appendChild(gifFileInput);
+		container.appendChild(previewArea);
+		document.body.appendChild(container);
+	}
+	</script>
+</body>
+
+</html>
