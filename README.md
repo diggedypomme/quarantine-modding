@@ -1,4 +1,4 @@
-# quarantine-modding
+# Modding Quarantine 1994
 Documenting my findings on modding the 1994 game Quarantine
 
 This is the github repo to go with my subreddit : https://www.reddit.com/r/QuarantineModding/  
