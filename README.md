@@ -4,6 +4,8 @@ Documenting my findings on modding the 1994 game Quarantine
 This is the github repo to go with my subreddit : https://www.reddit.com/r/QuarantineModding/  
 And youtube video: https://www.youtube.com/watch?v=nTVZKp6tR-Y
 
+Note that this is a work in progress and I will keep updating it as I fix up and get my code and explanations uploaded. This may take some time.
+
 ## Quarantine:
 I have been playing around with a game that made a big impact on me as a kid, the 1994 game Quarantine. Think Doom in a Taxi, with huge maps and sandbox gameplay. This github is a work in process to document my findings, and share the scripts that I used to do so. I am currently in the process of documenting all of this, which will take some time, so this will be filled out as I go.
 
@@ -69,7 +71,7 @@ There is no delimiter, so you need to work out the length of each subsequent til
 - number of floors * 18  
 - number of walls * 18  
 - Texture data *2  
-- sprite count * 2
+- sprite count * 12
 
 By working out the start stops for each of the tiles, you can then parse the data. I will add more info on this shortly.
 
