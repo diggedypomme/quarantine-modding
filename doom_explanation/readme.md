@@ -21,6 +21,9 @@ The exception to this is when you bring down the ceiling to the top of the build
 
 ### Individual texture actors, full map at once
 Each texture being an actor (so think a Doom creature or decoration). This has a 3D model (a single texture tile) as the sprite image. I then have the collision set to a radius of half of the model width. I just have the one model which can be loaded with each of the textures. I can scale it horizontally and vertically.
+![](actors1.png)
+![](actors2.png)
+![With 3d models turned off to show what I mean by them being actors](actors3.png)
 
 **Advantages:**
 - I can use a limited pool of textures as you are spawning each wall section in dynamically
@@ -123,3 +126,4 @@ This was a test that I did to separate every sector by a small space, and then u
 
 **Disadvantages:**
 - This did not work very well. Portals were randomly failing to work on occasion, and the game enforces a set limit to the number of hops through portals that you can see, replacing it with black if this limit is hit. You therefore lose the city backdrop. The number of hops cannot be altered as this is part of the engine.
+- the offset for the gaps really messes with my tracking scripts for which tile you are in (could be fixed) and also messes with the floors as they no longer map to the right xy coordinates so you'd need to calculate this for each tile and apply the offset
