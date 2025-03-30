@@ -111,3 +111,15 @@ Basically just using the Doom sectors and raising the floor. So like [image]
 - All walls still need to be assigned in advance. This means no dynamic maps, and no randomized maps
 - Midtextures do not block the engine line of sight, so you're still seeing the full map in advance
 - Can't "stack" on top of each other as such (you can't have 2 midtextures on a single linedef. You would have to make the wall above be slightly offset (which is a pain when they would then fall into the next tile's sector)
+
+## Any of the above, but with portals
+
+[image]
+
+This was a test that I did to separate every sector by a small space, and then use GZdoom linedef portals to dynamically link and unlink tile linedefs so that you could create your own culling distance
+
+**Advantages:**
+- culling distance means that you aren't viewing the full map at once
+
+**Disadvantages:**
+- This did not work very well. Portals were randomly failing to work on occasion, and the game enforces a set limit to the number of hops through portals that you can see, replacing it with black if this limit is hit. You therefore lose the city backdrop. The number of hops cannot be altered as this is part of the engine.
