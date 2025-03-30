@@ -76,4 +76,4 @@ There is no delimiter, so you need to work out the length of each subsequent til
 By working out the start stops for each of the tiles, you can then parse the data. I will add more info on this shortly.
 
 ### Doom
-to be updated.
+to be updated , but see the doom explanation subfolder for queries as to why I did it with all actors, and the pros and cons of doing it differently.
