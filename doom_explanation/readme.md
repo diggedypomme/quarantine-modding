@@ -40,7 +40,9 @@ Each texture being an actor (so think a Doom creature or decoration). This has a
 
 ### Individual texture actors, Dynamic loading of tiles
 This is the current setup that I use. This works by dynamically loading in the corresponding tiles around the player based on distance.
-
+![](actorsspawning1.png)
+![](actorsspawning2.png)
+![](actorsspawning3.png)
 **Advantages:**
 - This gives the advantages of the full map individual texture actors, whilst keeping the performance running ok due to not loading the whole map at once
 - The walls can be spawned in and removed in game. This means that you can switch between maps on the fly, or randomize maps
