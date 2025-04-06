@@ -1,3 +1,5 @@
+# In course of updating! this might take me a few days so please be patient, but let me know if you have a particular part you need advice on
+
 # Modding Quarantine 1994
 Documenting my findings on modding the 1994 game Quarantine
 
