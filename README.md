@@ -1,6 +1,9 @@
-# In course of updating! this might take me a few days so please be patient, but let me know if you have a particular part you need advice on
 
 # Modding Quarantine 1994
+
+! In course of updating! this might take me a few days so please be patient, but let me know if you have a particular part you need advice on
+
+
 Documenting my findings on modding the 1994 game Quarantine
 
 This is the github repo to go with my subreddit : https://www.reddit.com/r/QuarantineModding/  
