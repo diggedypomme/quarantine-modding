@@ -1,0 +1,6 @@
+// J_TileSetup Array - Generated for DOOM ACS
+
+int j_tilesetup[2][614][8] = {
+    {{0, 0, 0, 0, 0, 0, 0, 0}},
+    {}
+};
