@@ -1,4 +1,9 @@
+
 # Modding Quarantine 1994
+
+! In course of updating! this might take me a few days so please be patient, but let me know if you have a particular part you need advice on
+
+
 Documenting my findings on modding the 1994 game Quarantine
 
 This is the github repo to go with my subreddit : https://www.reddit.com/r/QuarantineModding/  
@@ -76,4 +81,4 @@ There is no delimiter, so you need to work out the length of each subsequent til
 By working out the start stops for each of the tiles, you can then parse the data. I will add more info on this shortly.
 
 ### Doom
-to be updated.
+to be updated , but see the doom explanation subfolder for queries as to why I did it with all actors, and the pros and cons of doing it differently.

@@ -40,7 +40,9 @@ Each texture being an actor (so think a Doom creature or decoration). This has a
 
 ### Individual texture actors, Dynamic loading of tiles
 This is the current setup that I use. This works by dynamically loading in the corresponding tiles around the player based on distance.
-
+![](actorsspawning1.png)
+![](actorsspawning2.png)
+![](actorsspawning3.png)
 **Advantages:**
 - This gives the advantages of the full map individual texture actors, whilst keeping the performance running ok due to not loading the whole map at once
 - The walls can be spawned in and removed in game. This means that you can switch between maps on the fly, or randomize maps
@@ -117,8 +119,6 @@ Basically just using the Doom sectors and raising the floor. So like [image]
 
 ## Any of the above, but with portals
 
-[image]
-
 This was a test that I did to separate every sector by a small space, and then use GZdoom linedef portals to dynamically link and unlink tile linedefs so that you could create your own culling distance
 
 **Advantages:**
@@ -127,3 +127,6 @@ This was a test that I did to separate every sector by a small space, and then u
 **Disadvantages:**
 - This did not work very well. Portals were randomly failing to work on occasion, and the game enforces a set limit to the number of hops through portals that you can see, replacing it with black if this limit is hit. You therefore lose the city backdrop. The number of hops cannot be altered as this is part of the engine.
 - the offset for the gaps really messes with my tracking scripts for which tile you are in (could be fixed) and also messes with the floors as they no longer map to the right xy coordinates so you'd need to calculate this for each tile and apply the offset
+
+![](portals1.png)
+![](portals2.png)
