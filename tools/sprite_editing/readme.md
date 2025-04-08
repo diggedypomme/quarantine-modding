@@ -41,7 +41,7 @@ As this is currently still in progress, I need to combine and rework some of the
 
  ![Sprites](../../images/screenshots/sprite_editor.png)
 
- ![Sprites](../../images/explanation/image_import.png)
+ ![Sprites](../../images/screenshots/image_import.png)
 
 
 
