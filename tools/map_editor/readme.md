@@ -1,1 +1,1 @@
-![Sprites](../images/screenshots/mapping.png)
+![Sprites](../../images/screenshots/mapping.png)
