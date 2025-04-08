@@ -37,15 +37,23 @@ As this is currently still in progress, I need to combine and rework some of the
 ---
 ## 1_simple_html_to_open_sprite6.html - the main editor. WIP
 
+
+
+ ![Sprites](../../images/screenshots/sprite_editor.png)
+
+ ![Sprites](../../images/explanation/image_import.png)
+
+
+
 **NOTE!** I will look at getting this all updated so that you can drag on a GIF file and set it automatically, but I'm rushing to get all the tools out. It has been a few months since I worked on this, so I will need to come back to it.  
 
 I removed my hard-coded `kfloor` palette here. For now you will need to extract the gif palette in question and set it here, or edit the browser localstorage "colorPalette_predefined_kfloor" :  
+
 
 ### Line 378:
 ```js
 'kfloor': () => {
     palette = {
 
- ![Sprites](../../images/screenshots/sprite_editor.png)
 
- ![Sprites](../../images/explanation/image_import.png)
+
