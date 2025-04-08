@@ -44,5 +44,8 @@ I removed my hard-coded `kfloor` palette here. For now you will need to extract 
 ### Line 378:
 ```js
 'kfloor': () => {
-    palette = {      
-	
+    palette = {
+
+ ![Sprites](../../images/screenshots/sprite_editor.png)
+
+ ![Sprites](../../images/explanation/image_import.png)
