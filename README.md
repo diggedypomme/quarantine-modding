@@ -82,10 +82,10 @@ By working out the start stops for each of the tiles, you can then parse the dat
 
 
 Sprites:
-![Sprites](images/explanation/sprites.img)
+![Sprites](images/explanation/sprites.png)
 
 Walls:
-![Sprites](images/explanation/walls.img)
+![Sprites](images/explanation/walls.png)
 
 ### Doom
 to be updated , but see the doom explanation subfolder for queries as to why I did it with all actors, and the pros and cons of doing it differently.
