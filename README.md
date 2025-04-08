@@ -80,12 +80,11 @@ There is no delimiter, so you need to work out the length of each subsequent til
 
 By working out the start stops for each of the tiles, you can then parse the data. I will add more info on this shortly.
 
-
-Sprites:
+Sprites:  
 ![Sprites](images/explanation/sprites.png)
 
-Walls:
-![Sprites](images/explanation/walls.png)
+Walls:  
+![Walls](images/explanation/walls.png)
 
 ### Doom
 to be updated , but see the doom explanation subfolder for queries as to why I did it with all actors, and the pros and cons of doing it differently.
