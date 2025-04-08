@@ -9,6 +9,9 @@ Documenting my findings on modding the 1994 game Quarantine
 This is the github repo to go with my subreddit : https://www.reddit.com/r/QuarantineModding/  
 And youtube video: https://www.youtube.com/watch?v=nTVZKp6tR-Y
 
+[![Watch the video](https://img.youtube.com/vi/nTVZKp6tR-Y/0.jpg)](https://www.youtube.com/watch?v=nTVZKp6tR-Y)
+
+
 Note that this is a work in progress and I will keep updating it as I fix up and get my code and explanations uploaded. This may take some time.
 
 ## Quarantine:
